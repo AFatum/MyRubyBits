@@ -78,11 +78,97 @@ end
 
 #--- Inheritance II
 class ArcadeGame < Game
+  attr_accessor :weight
+  def initialize (name, options={}) 
+    super
+    self.weight = options[:weight]
+  end
 end
-
 class ConsoleGame < Game
 end
 
+#--- Inheritance III
+class ConsoleGame < Game
+  def to_s
+   "#{self.name} - #{self.system}"
+  end
+end
+
+#--- Refactoring
+class Game
+  attr_accessor :name, :year, :system
+  attr_reader :created_at
+  def initialize(name, options={})
+    self.name = name
+    self.year = options[:year]
+    self.system = options[:system]
+    @created_at = Time.now
+  end
+
+  def to_s
+    self.name
+  end
+
+  def description
+    to_s + " was released in #{self.year}."
+  end
+end
+
+class ConsoleGame < Game
+  def to_s
+    "#{self.name} - #{self.system}"
+  end
+
+  def description
+    to_s + " was released in #{self.year}."
+  end
+end
+
+
+#----------------
+class Game
+  attr_accessor :name, :year, :system
+  attr_reader :created_at
+  def initialize(name, options={})
+    self.name = name
+    self.year = options[:year]
+    self.system = options[:system]
+    @created_at = Time.now
+  end
+end
+
+---
+class Game
+  attr_accessor :name, :year, :system
+  attr_reader :created_at
+  def initialize(name, options={})
+    self.name = name
+    self.year = options[:year]
+    self.system = options[:system]
+    @created_at = Time.now
+  end
+
+  def to_s
+    self.name
+  end
+
+  def description
+    "#{self} was released in #{self.year}."
+  end
+end
+
+class ConsoleGame < Game
+  def to_s
+    "#{self.name} - #{self.system}"
+  end
+
+  def description
+    "#{self.name} - #{self.system} was released in #{self.year}."
+  end
+end
+
+---
+  
 
 class Game
   attr_accessor :name, :year, :system
@@ -92,5 +178,19 @@ class Game
     self.year = options[:year]
     self.system = options[:system]
     @created_at = Time.now
+  end
+
+  def to_s
+    self.name
+  end
+
+  def description
+    "#{self} was released in #{self.year}."
+  end
+end
+
+class ConsoleGame < Game
+  def to_s
+    "#{self.name} - #{self.system}"
   end
 end
