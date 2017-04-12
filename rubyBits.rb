@@ -427,28 +427,86 @@ array.split(2) #=> [0, 1], [2, 3, 4, 5, 6]
 
 #---------------Date----------------------------
 app = DateTime.new(2012, 12, 21, 14, 27, 45)
+#=> Fri, 21 Dec 2012 14:27:45 +0000
 app.at_beginning_of_day   #=> вернет значение с начала дня
+#=> Fri, 21 Dec 2012 00:00:00 +0000
 app.at_end_of_month       #=> вернет значение до конца месяца 
+#=> Mon, 31 Dec 2012 23:59:59 +0000
 app.at_beginning_of_year  #=> вернет значение с начала года
+#=> Sun, 01 Jan 2012 00:00:00 +0000
 
 app.advance(years: 4, month: 3, weeks: 2, days: 1)  
 #=> вернет значение заданной даты плюс указанный период в аргументе
+#=> Wed, 05 Apr 2017 14:27:45 +0000
 
 app.tomorrow #=> вернет завтрешний день, от указанной даты
+#=> Sat, 22 Dec 2012 14:27:45 +0000
 app.yesterday #=> вернет вчерашний день, от указанной даты
+#=> Thu, 20 Dec 2012 14:27:45 +0000
 
+#---------------HASH----------------------------
+# есть пример отображения двух хешей
+options = {user: 'codeschool', lang: 'fr'}
+new_options = {user: 'codeschool', lang: 'fr', password: 'dunno'}
+# определение разницы между двумя вышеуказанными хешами
+options.diff(new_options) #=> {:password=>"dunno"}
+  
+# преобразование символов хеша в строки
+options.stringify_keys #=> {"user"=>"codeschool", "lang"=>"fr"}
 
-#---------------Date----------------------------
+#---------------Объединение хешей---------------------------
+# пример хешей
+options = {
+lang: 'fr',
+user: 'codeschool'
+}
 
+defaults = {
+lang: 'en',
+country: 'us'
+}
 
+#объединям
+options.reverse_merge(defaults)
+#получаем:
+{
+lang: 'fr',
+user: 'codeschool',
+country: 'us'
+}
 
+$ gem install activesupport
+$ gem install i18n
+require 'active_support/all'
+#---------------Объединение хешей---------------------------
+#---------------CORE EXTENSIONS: INTEGER---------------------------
+def background_class(index)
+  return 'white' if index.odd?
+  return 'grey' if index.even?
+end
+# - благодаря методам .odd, и .even, мы можем возвращать четные и нечетные значения при исполнении итераторов, пример:
+tweets.each_with_index do |tweet, index|
+  puts "<div class='#{background_class(index)}'>#{tweet}</div>"
+end
+# получаем зебру
+=begin
+  <div class='grey'>I had eggs for breakfast.</div>
+  <div class='white'>@codeschool pwns.</div>
+  <div class='grey'>Shopping!</div>
+  <div class='white'>Bedtime.</div>
+=end
+#---------------INFLECTOR---------------------------
+# - используются для преобразования строк, под определенные шаблоны, например:
+# - преобразование порядкового значения числа в строку:
+"#{1.ordinalize} place!"  # => "1st place!"
+"#{2.ordinalize} place."  # => "2nd place!"
+"#{23.ordinalize} place." # => "23rd place!"
 
-
-
-
-
-
-
+# pluralize  - преобразовывает строку единственного числа, во множественное
+"user".pluralize    #=> "users"
+"octopus".pluralize #=> "octopi"
+# singularize  -  наоборот, преобразовывает строку множественного числа, в единственное
+"women".singularize #=> "woman"
 
 
 
