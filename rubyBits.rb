@@ -508,8 +508,8 @@ end
 # singularize  -  наоборот, преобразовывает строку множественного числа, в единственное
 "women".singularize #=> "woman"
 
-
-
+"ruby bits".titleize #=> Всё с большой буквы "Ruby Bits"
+"account_options".humanize #=> "Account options"
 
 
 
