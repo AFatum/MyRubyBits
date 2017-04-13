@@ -511,11 +511,120 @@ end
 "ruby bits".titleize #=> Всё с большой буквы "Ruby Bits"
 "account_options".humanize #=> "Account options"
 
+#================LEVEL-5
+#-----------NAMESPACE
+# Использование  модулей
+#--- IMAGE_UTILS.RB
+def preview (image)
+end
+
+def transfer ( image, destination )
+end
+
+#--- RUN.RB
+require 'image_utils'
+
+image = user.image
+preview(image)
 
 
+#- Вместо подключений внешний библиотек, лучше оборачивать их в модули
+#--- IMAGE_UTILS.RB
+module ImageUtils
+  def self. preview (image)
+  end
+  
+  def self. transfer ( image, destination )
+  end
+end
 
+#--- RUN.RB
+require 'img_ut.rb'
 
+image = user.image
+ImageUtils. preview(image)
 
+#-------------MIXIN----------------
+#Mixin - это пространство имен, которое можно подключать в классы
+
+#--- IMAGE_UTILS.RB
+module ImageUtils
+  def preview
+  end
+  
+  def transfer ( destination )
+  end
+end
+
+#--- AVATAR.RB.RB
+require 'image_utils'
+class Image
+  # подключение модуля
+  include ImageUtils
+end
+
+#mixin целесообразно использовать вместо классаов-родителей, когда необходимо от одного класса наследовать несколько классов, рассмотрим пример:
+#есть класс-родитель - 
+class Shareable
+  def share_on_facebook
+  end
+end
+
+# и от него наследуются несколько дочерних классов:
+
+class Post < Shareable
+  def share_on_facebook
+  end
+end
+      
+class Image < Shareable
+  def share_on_facebook
+  end
+end
+      
+class Tweet < Shareable
+  def share_on_facebook
+  end
+end
+
+# вместо этого класса-родителя, лучше использовать миксин - mixin и делаее иклюдить в нужный нам класс
+module Shareable
+  def share_on_facebook
+  end
+end 
+
+module Favoritable
+  def add_to_delicious
+  end
+end    
+      
+class Post
+  include Shareable
+end
+
+class Image
+  include Shareable
+end
+
+class Tweet
+  include Shareable
+  include Favoritable
+end
+      
+#------------Подключение к классовым методам
+# также возможно подключать модули к классовым методам с помощью extend
+
+class Tweet
+  extend Searchable
+end
+
+module Searchable
+  def find_all_from(user)
+  end
+end
+
+# теперь можно вызвать метод find_all_from, как классовый, т.е. без создания объекта
+Tweet.find_all_from('@GreggPollack')
 
 
 

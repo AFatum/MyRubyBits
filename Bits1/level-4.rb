@@ -76,53 +76,6 @@ end
 
 puts convert_title("super mario bros.")
 
-#================LEVEL-5
-#-----------NAMESPACE
-# Использование  модулей
-#--- IMAGE_UTILS.RB
-def preview (image)
-end
-
-def transfer ( image, destination )
-end
-
-#--- RUN.RB
-require 'image_utils'
-
-image = user.image
-preview(image)
-
-
-#- Вместо подключений внешний библиотек, лучше оборачивать их в модули
-#--- IMAGE_UTILS.RB
-module ImageUtils
-  def self. preview (image)
-  end
-  
-  def self. transfer ( image, destination )
-  end
-end
-
-#--- RUN.RB
-require 'img_ut.rb'
-
-image = user.image
-ImageUtils. preview(image)
-
-#-------------MIXIN----------------
-#Mixin - это пространство имен, которое можно подключать в классы
-
-#--- IMAGE_UTILS.RB
-module ImageUtils
-  def preview
-  end
-  
-  def transfer ( destination )
-  end
-end
-
-#--- AVATAR.RB.RB
-
 
 
 
