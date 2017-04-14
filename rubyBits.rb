@@ -626,12 +626,164 @@ end
 # теперь можно вызвать метод find_all_from, как классовый, т.е. без создания объекта
 Tweet.find_all_from('@GreggPollack')
 
+#------------HOOKS - SELF.INCLUDED
+# в случае, если нам нужно вызавать методы класса модуля (классовые методы) и методы самого модуля (инстансные методы), то можно использовать такой вариант:
 
+module ImageUtils
+  def preview
+  end
+  
+  def transfer(destination)
+  end
+  
+  module ClassMethods
+    def fetch_from_twitter(user)
+    end
+  end
+end
+      
 
+class Image
+  include ImageUtils # - подключаем модуль ImageUtils
+  extend ImageUtils::ClassMethods # - подключаем модуль ClassMethods
+end
 
+# и теперь мы можем обращаться к инстансным методам через объект
+image = user.image
+image.preview
+# а также, как к классовым методам
+Image.fetch_from_twitter('gregg')
 
+# Но лучше использовать специальный метод в модуле, который позволит нам подключать инстансные и классовые методы вместе
 
+module ImageUtils
+  # здесь мы подключаем инстансные методы
+  # метод included подкючает классовые методы к классу, к которому будет подключен модуль 
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+  
+  def preview
+  end
+  
+  def transfer(destination)
+  end
+  
+  module ClassMethods
+  #  в модуле ClassMethods, классовые методы самого модуля, которые должны вызавать ВНЕ объекта
+    def fetch_from_twitter(user)
+    end
+  end
+end
 
+# теперь подключаем наш модуль к классу Image
+class Image
+  include ImageUtils
+end
+
+# И теперь мы можем использовать методы модуля внутри подключенного класса
+image = user.image
+image.preview # инстансные методы
+Image.fetch_from_twitter('gregg') # классовые методы
+      
+# ---------------ACTIVESUPPORT::CONCERN
+# с помощью модуля ACTIVESUPPORT::CONCERN мы можем подключать к классу, методы из разнах модулей, а также группировать модули по функциональности.
+
+# есть модуль управления изображениями
+module ImageUtils
+# подключаем к нему библиотеку Concern
+  extend ActiveSupport::Concern
+# далее создаем модуль для хранения классовых методов
+  module ClassMethods
+    def clean_up; end
+  end
+end
+
+# далее создаём ещё один моуль для управления изображением
+module ImageProcessing
+  extend ActiveSupport::Concern
+  # подключаем к нему функционал модуля ImageUtils
+  include ImageUtils
+  # в спецаильном блоке указываем какие классовые методы, мы хотим подключить к модулю
+  included do
+    clean_up
+  end
+end
+
+# теперь нам достаточно подключить к классу только один модуль ImageProcessing и к нему будет подключен весь функционал методов от модуля ImageUtils и от других возможно подключенных модулей
+class Image
+  include ImageProcessing
+end
+
+#--- Пример, как можно добавлять классовые методы, как инстансные, с помощью библиотеки Concern и блока included:
+# Как мы видим, внизу, внутри модуля LibraryUtils мы подключаем саму библиотеку ActiveSupport::Concern, а также добавляем блок included, с указанием классовых методов, которые мы хотим вызывать "инстансно".
+# После этого, мы можем вызывать эти методы, как инстансные.
+module LibraryUtils
+
+  extend ActiveSupport::Concern
+
+  included do
+    load_game_list
+  end
+  
+  def add_game(game)
+  end
+
+  def remove_game(game)
+  end
+
+  module ClassMethods
+    def search_by_game_name(name)
+    end
+
+    def load_game_list
+    end
+  end
+end
+
+#========================= BLOCKS ==========================
+#--- USING BLOCKS ---------------
+# так писать блоки не нужно
+words = ['Had', 'eggs', 'for', 'breakfast.']
+for index in 0..(words.length - 1)
+  puts words[index]
+end
+
+# блоки нужно писать ТАК
+words = ['Had', 'eggs', 'for', 'breakfast.']
+words.each { |word| puts word }
+
+#--- DECLARING BLOCKS ---------------
+# в случае еси код блока помещается в одну строку, то мы используем фигурные скобки {}
+words.each { |word| puts word }
+# если же код блока не помещается в одну строку, то мы используем ключевые слова do end
+words.each do |word|
+  backward_word = word.reverse
+  puts backward_word
+end
+
+# если нам нужно вернуть занчение из одной операции, как здесь
+words.each do |word|
+  puts word
+end
+# то лучше такой код указывать в одной строке через {}
+backward_words = words.map { |word| word.reverse }
+
+#--------------YIELD--------------------
+# yield - используются когда нам нужно указать конкретное место в блоке, где мы хотим его использовать, например:
+  
+def call_this_block_twice
+  yield
+  yield
+end
+  
+# здесь мы видим, что слово yield используется дважды, и значит, что аргумент передаваемый в блоке будет выполняться дважды, как здесь
+
+call_this_block_twice { puts "twitter" } #=> twitter twitter
+call_this_block_twice { puts "tweet" } #=> tweet tweet
+  
+#--------------YIELD - ARGUMENTS--------------------
+# для yield можно указать аргумент и тогда будет выполняться именно то значение, которое будет указано в аргументе
 
 
 
