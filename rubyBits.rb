@@ -783,8 +783,126 @@ call_this_block_twice { puts "twitter" } #=> twitter twitter
 call_this_block_twice { puts "tweet" } #=> tweet tweet
   
 #--------------YIELD - ARGUMENTS--------------------
-# для yield можно указать аргумент и тогда будет выполняться именно то значение, которое будет указано в аргументе
+# для yield можно указать аргумент по-умолчанию и тогда мы сможем использовать это значение с помощью переменной myarg, пример
+# имя переменной myarg может быть любым, главное чтоб было занесено в прямые скобки |...|
 
+def call_this_block
+yield "tweet"
+end
+
+call_this_block { |myarg| puts myarg }        #=> tweet
+call_this_block { |myarg| puts myarg.upcase } #=> TWEET
+
+# ещё один пример
+def call_this_block
+  block_result = yield "foo"
+  puts block_result 
+end
+
+call_this_block { |arg| arg.reverse } #=> "oof"
+  
+#--------------USING BLOCKS--------------------
+# рассмотрим пример использования блоков, на этом классе:
+  
+class Timeline
+  def list_tweets
+    @user.friends.each do |friend|
+      friend.tweets.each { |tweet| puts tweet }
+    end
+  end
+  def store_tweets
+    @user.friends.each do |friend|
+      friend.tweets.each { |tweet| tweet.cache }
+    end
+  end
+end
+
+# здесь мы видим используются два метода для выполнения аналогично операции с твитом.
+# такой вариант не самый оптимальный, мы можем обойтись одним методом с использованием слова yield
+
+class Timeline
+  def each
+    @user.friends.each do |friend|
+      friend.tweets.each { |tweet| yield tweet }
+    end
+  end
+end
+
+# здесь в прямых скобках мы указали не только аргумент цикла each, но и аргумент блока, который обрабатываем этот цикл.
+timeline = Timeline.new(user)
+timeline.each { |tweet| puts tweet }
+timeline.each { |tweet| tweet.cache }
+
+#--------------ENUMERABLE--------------------
+# также, если мы подключим модуль Enumerable, то нам будут доступны дополнительные методы для работы, в примере ниже это сортировка, упаковка в массив, и поиск какого-то значения 
+class Timeline
+  def each
+  ...
+  end
+  include Enumerable
+end
+
+timeline.sort_by  { |tweet| tweet.created_at }
+timeline.map      { |tweet| tweet.status }
+timeline.find_all { |tweet| tweet.status =~ /\@codeschool/ }
+
+#--------------“EXECUTE AROUND”--------------------
+# рассмотрим пример логического дублирования, и как мы с помощью блока, можем упростить этот код
+# есть два аналогичных метода
+
+def update_status(user, tweet)
+  begin
+    sign_in(user)
+    post(tweet)
+  rescue ConnectionError => e
+    logger.error(e)
+  ensure
+    sign_out(user)
+  end
+end
+
+
+def get_list(user, list_name)
+  begin
+    sign_in(user)
+    retrieve_list(list_name)
+  rescue ConnectionError => e
+    logger.error(e)
+  ensure
+    sign_out(user)
+  end
+end
+
+# вместо этого, мы можем использовать один метод
+def while_signed_in_as(user)
+  begin
+    sign_in(user)
+    yield
+  rescue ConnectionError => e
+    logger.error(e)
+  ensure
+    sign_out(user)
+  end
+end
+# слово yield мы указываем на участке кода, где видим основное отличие, для того, чтоб потом использовать отличающиеся значения, как аргументы блока
+
+while_signed_in_as(user) do
+  post(tweet)
+end
+
+tweets = while_signed_in_as(user) do
+  retrieve_list(list_name)
+end
+
+# также, ещё можно убрать операторы исключения begin-end, за ненадобностью
+def while_signed_in_as(user)
+  sign_in(user)
+  yield
+  rescue ConnectionError => e
+    logger.error(e)
+  ensure
+    sign_out(user)
+end
 
 
 
