@@ -754,7 +754,7 @@ words = ['Had', 'eggs', 'for', 'breakfast.']
 words.each { |word| puts word }
 
 #--- DECLARING BLOCKS ---------------
-# в случае еси код блока помещается в одну строку, то мы используем фигурные скобки {}
+# в случае если код блока помещается в одну строку, то мы используем фигурные скобки {}
 words.each { |word| puts word }
 # если же код блока не помещается в одну строку, то мы используем ключевые слова do end
 words.each do |word|
@@ -787,7 +787,7 @@ call_this_block_twice { puts "tweet" } #=> tweet tweet
 # имя переменной myarg может быть любым, главное чтоб было занесено в прямые скобки |...|
 
 def call_this_block
-yield "tweet"
+  yield "tweet"
 end
 
 call_this_block { |myarg| puts myarg }        #=> tweet
@@ -846,6 +846,8 @@ timeline.sort_by  { |tweet| tweet.created_at }
 timeline.map      { |tweet| tweet.status }
 timeline.find_all { |tweet| tweet.status =~ /\@codeschool/ }
 
+# т.е. модуль Enumerable, берет за основу метод each и далее к нему применяет свой набор методов.
+
 #--------------“EXECUTE AROUND”--------------------
 # рассмотрим пример логического дублирования, и как мы с помощью блока, можем упростить этот код
 # есть два аналогичных метода
@@ -903,7 +905,4 @@ def while_signed_in_as(user)
   ensure
     sign_out(user)
 end
-
-
-
 
