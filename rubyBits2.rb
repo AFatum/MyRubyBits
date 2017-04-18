@@ -373,8 +373,158 @@ show_method.call(1)
 
 
 #========================= LEVEL 3: UNDERSTANDING SELF ==================
+# self вызванная вне класса, возвращает объект main
+puts "Outside the class: #{self}" # => mail
+# self вызванная вне класса, возвращает объект класса в котором он был вызван
+class Tweet
+  puts "Inside the class: #{self}"
+end
 
+#--------------------- CLASS METHODS ----------------------------
+# классовые (внешние) методы, методы, которые вызываются вне объекта 
+class Tweet
+  def self.find(keyword)
+    puts "Inside a class method: #{self}"
+  end
+end
+# выхов классового метода, осуществляется вне объекта, через сам класс
+Tweet.find("rubybits")
+# традиционное объявление классового метода:
+class Tweet
+  def self.find(keyword)
+    # do stuff here
+  end
+end
+# ещё один способ объявить классовый метод, который используют реже
+def Tweet.find(keyword)
+  # do stuff here
+end
 
+# простой пример инстансного (внутреннего) метода
+class Tweet
+  def initialize(status)
+    puts "Inside a method: #{self}"
+    @status = status
+  end
+end
 
+Tweet.new("What is self, anyway?")
 
+#----------------- CLASS_EVAL -----------------------------
+# CLASS_EVAL - устанавливаем self-свойства в заданый класс, рассмотрим примеры
+class Tweet
+  attr_accessor :status, :created_at
 
+  def initialize(status)
+    @status = status
+    @created_at = Time.now
+  end
+end
+
+Tweet.class_eval do
+  attr_accessor :user
+end
+
+tweet = Tweet.new("Learning class_eval with Ruby Bits")
+tweet.user = "codeschool"
+# таким образом мы можем динамически добавлять в класс аксессоры или классовые методы, когда захотим 
+
+#----------------- CREATING A METHOD LOGGER -----------------------------
+#Рассмотри прменение динамических инструментов работы с классами, на приере  создания метода-логгера. Данный метод будет принимать в себя аргумент имя класса и имя метода, который будет исполнятся. Далее метод будет создавать оригинальную копию исполняемого метода и фиксировать время последнего исполнения. 
+
+class MethodLogger
+  # в аргументах метода, мы передаем имя класса, которое будем использовать,  и имя метода
+  def log_method(klass, method_name)
+    # далее мы с помощью класса class_eval, добавляем в класс нужный нам метод, который будем исполнять. В переменной klass передается имя класса, ну а в переменной method_name, соответственно имя классового метода, который будем исполнять.
+    klass.class_eval do
+      # создаем копию метода, который будем исполнять, добавляем к имени метода окончание - "_original"
+      alias_method "#{method_name}_original", method_name
+      # далее мы переопределеяем выбранный метод с помощью блока define_method:
+      define_method method_name do
+        # здесь заносим дату и время последнего исполнения метода
+        puts "#{Time.now}: Called #{method_name}"
+        # здесь вызываем оригинальную версию исполяемого метода метода
+        send "#{method_name}_original"
+      end
+    end
+  end
+end
+
+# таким образом мы получили версию метода-логгера, который фиксирует время исполнения определенного метода, заданного ему в аргументе.
+# рассмотрим пример изполнение метода-логгера
+# описание класса
+class Tweet
+  def say_hi
+    puts "Hi"
+  end
+end
+
+# создание объекта класса
+logger = MethodLogger.new
+# передаем в метод имя класса и имя метода для логгирования
+logger.log_method(Tweet, :say_hi)
+
+Tweet.new.say_hi #=> 2012-09-01 12:52:03 -400: Called say_hi - Hi
+
+# но вышеуказанный метод не учитываем принимаемые аргументы и блоки в исполняемый (логированный) метод, зададим аргументы и блоки исполняемому методу:
+class MethodLogger
+  def log_method(klass, method_name)
+    klass.class_eval do
+      alias_method "#{method_name}_original", method_name
+      # здесь мы передаём аргументы и блоки
+      define_method method_name do |*args, &block|
+        puts "#{Time.now}: Called #{method_name}"
+        # здесь мы исполняем оригинальный метод с аргументами и блоками
+        send "#{method_name}_original" , *args, &block
+      end
+    end
+  end
+end
+
+#----------------- INSTANCE_EVAL -----------------------------
+# с помощью блока .instance_eval мы можем передавать инстансные переменные класса. Рассмотрим пример клссса с аксессором для объявления инстансный переменных:
+
+class Tweet
+  attr_accessor :user, :status
+end
+
+# далее мы с помощью метода .instance_eval задаем параметры переменной status
+tweet = Tweet.new
+tweet.instance_eval do
+  self.status = "Changing the tweet's status"
+end
+
+# рассмотрим пример задания инстансный переменных класса через блок
+class Tweet
+  attr_accessor :user, :status
+  
+  def initialize
+  # здесь yield имеет значение по-умолчанию - self, для того чтоб объявить именно инстансные методы.
+    yield self if block_given?
+  end
+end
+
+# объявляем блок с указанием инстансных переменных:
+Tweet.new do |tweet| # здесь в значении tweet передается значение по-умолчанию для блока - self, поэтому код  tweet.status соответствует коду self.status
+  tweet.status = "I was set in the initialize block!"
+  tweet.user = "Gregg"
+end
+
+# но вышеуказанный код можно описать с помощью блока instance_eval, рассмотрим пример:
+
+class Tweet
+  attr_accessor :user, :status
+  # передаем блок на исполнение в аргументе на инициализацию
+  def initialize (&block)
+  # далее с помощью блока instance_eval мы указываем, что весь код переданные в блоке-аргументе, должен передавать значения инстансным переменным
+    instance_eval(&block) if block_given?
+  end
+end
+
+# и далее мы просто создаем блок, который будем передавать классу, только здесь уже вместо |tweet| прямо так и указываем - self
+Tweet.new do
+  self.status = "I was set in the initialize block!"
+  self.user = "Gregg"
+end
+
+# таким образом мы получили более "чистый" код.
