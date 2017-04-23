@@ -731,17 +731,146 @@ end
 tweet.hash_codeschool # => сначала будет исполнен method_missing
 tweet.hash_codeschool # => а тут уже будет исполнен непосредственно .hash_codeschool
 
+#========================= LEVEL 5: DSL PART 1 ==================
+# DSL - это специальный язык раметки, по которому между собой могут взаимодействовать, разные скрипты, на разных языках.
+# В Ruby данные по DSL принимаются через блок данных, рассмотрим пример такого блока:
 
+tweet_as 'markkendall' do
+mention 'codeschool'
+text 'I made a DSL!'
+hashtag 'hooray'
+hashtag 'ruby'
+link 'http://codeschool.com'
+end
 
+# это обычный пример блока данных, полученных по DSL, из которого, нам нужно будет сформировать строку - @codeschool I made a DSL! #hooray #ruby http://codeschool.com
 
+#----------------- FIRST IMPLEMENTATION -----------------------------
+# первый вариант реализации, мы просто создаем метод, который будет рализовывать наш блок данных через класс:
+# сначала, мы создаем наш класс, который будет работать с данными принимаемого блока
 
+class Tweet
+  def initialize(user)
+    @user = user
+    @tweet = []
+  end
 
+  # метод формирует строку из наполненного массива, сам маасив наполняется неиже...
+  def submit_to_twitter
+    tweet_text = @tweet.join(' ')
+    puts "#{@user}: #{tweet_text}"
+  end
 
+  # далее идут методы, название которых соответствует полям передаваемого блока, по исполнению этих методов, мы наполняем массив @tweet
+  def text(str)
+    @tweet << str
+  end
+  
+  def mention(user)
+    @tweet << "@" + user
+  end
 
+  def hashtag(str)
+    @tweet << "#" + str
+  end
 
+  def link(str)
+    @tweet << str
+  end
+end
 
+# далее мы описываем исполнение самого блока принимаемых данных
+def tweet_as(user)
+  tweet = Tweet.new(user)
+  yield tweet
+  # здесь мы выводим саму строку из метода .submit_to_twitter
+  tweet.submit_to_twitter
+end
 
+# описываем исполнение самого блока данных
+tweet_as 'markkendall' do |tweet|
+  tweet.mention 'codeschool'
+  tweet.text 'I made a DSL!'
+  tweet.hashtag 'hooray'
+  tweet.hashtag 'ruby'
+  tweet.link 'http://codeschool.com'
+end
 
+#----------------- NAMESPACE POLLUTION -----------------------------
+# но вышеуказанный способ не сильно подходит, потому что, синтаксис не соответствует стандартам DSL, вызов к полям передаваемого блока проводится через заданный клас tweet.
+#  в нижнем примере, мы решаем эту проблему с помощью метода instance_eval, в который передаем аргументом заданных блок
+# сам класс ничем не отличается от верхнего, также само исполняет поступленные в него данные
 
+class Tweet
+  def initialize(user)
+    @user = user
+    @tweet = []
+  end
 
+  def submit_to_twitter
+    tweet_text = @tweet.join(' ')
+    puts "#{@user}: #{tweet_text}"
+  end
+
+  def text(str)
+    @tweet << str
+  end
+  
+  def mention(user)
+    @tweet << "@" + user
+  end
+
+  def hashtag(str)
+    @tweet << "#" + str
+  end
+
+  def link(str)
+    @tweet << str
+  end
+end
+
+#  метод tweet_as, теперь принимает в себя поступающий блок данных &block
+def tweet_as(user, &block)
+  tweet = Tweet.new(user)
+  # здесь мы подключаем исполнение поступающего блока, внутрь объекта tweet 
+  tweet.instance_eval(&block)
+  # и просто исполняем принятые данные с помощью метода .instance_eval
+  tweet.submit_to_twitter
+end
+
+# таким образом, нам удалось сохранить стандартный DSL-синтаксис
+tweet_as 'markkendall' do
+  mention 'codeschool'
+  text 'I made a DSL!'
+  hashtag 'hooray'
+  hashtag 'ruby'
+  link 'http://codeschool.com'
+end
+
+#----------------- METHOD CHAINING -----------------------------
+# изменение методов, мы можем изменить методы-обработчики входящего блока данных
+
+tweet_as 'markkendall' do
+  mention 'codeschool'
+  # дальше Ruby подключает данные родителей
+  text('I made a DSL!').hashtag('hooray').hashtag('ruby')
+  link 'http://codeschool.com'
+end
+
+# далее при вызове методов обработчиков, нам нужно вконце возвращать обновленный результат через self 
+
+def text(str)
+  @tweet << str
+  self
+end
+
+def mention(user)
+  @tweet << "@" + user
+  self
+end
+
+def hashtag(str)
+  @tweet << "#" + str
+  self
+end
 
