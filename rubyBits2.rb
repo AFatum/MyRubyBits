@@ -528,3 +528,220 @@ Tweet.new do
 end
 
 # таким образом мы получили более "чистый" код.
+
+#========================= LEVEL 4: HANDLING MISSING METHODS ==================
+#----------------- METHOD_MISSING -----------------------------
+# с помощью метода method_missing() мы можем указать выполнение объекту в случае вызова неизвестного метода.
+
+class Tweet
+  # здесь в аргументе мы передаем имя метода, и аргументы
+  def method_missing(method_name, *args)
+    # здесь передаем нужный нам текст ошибки, исполнение может быть любое
+    puts "You tried to call #{method_name} with these arguments: #{args}"
+  end
+end
+
+Tweet.new.submit(1, "Here's a tweet.")
+#=> You tried to call submit with arguments: [1, "Here's a tweet."]
+
+# ещё один пример использование с логированием результата вызова
+
+
+class Tweet
+  def method_missing(method_name, *args)
+    # логируем результат вызова метода
+    logger.warn "You tried to call #{method_name} with these arguments: #{args}"
+    # исполняем оригинальный метод - method_missing - NoMethodError
+    super
+  end
+end
+
+#----------------- DELEGATING METHODS -----------------------------
+# теперь представим ситуация, когда нам нужно вызывать какие-то методы объекта, который передается нам в аргументе класса
+
+class Tweet
+  def initialize(user)
+    @user = user
+  end
+
+  def username
+    @user.username
+  end
+
+  def avatar
+    @user.avatar
+  end
+end
+
+# в примере выше, мы видим, что в аргемунте передается объект user, и мы вызываем его метода username и avatar.
+# Но это может быть неудобно, создавать отдельный метод для каждого метода объекта переданного в аргументе
+# как альтернативу, можно использовать динамический ваызов методов .send
+
+class Tweet
+  def initialize(user)
+    @user = user
+  end
+
+  def method_missing(method_name, *args)
+  # выхываем методы класса динамически с помощью метода .send
+    @user.send(method_name, *args)
+  end
+end
+
+# но даже такой способ может быть не подходящим, т.к. в примере выше, можно вызвать любой метод объекта @user, а что если нам нужно чтоб доступ был только к определенным методам? Тогда можно использовать список делегированых методов - DELEGATED_METHODS
+
+class Tweet
+  # здесь в массиве, мы указываем имена доступных методов, через символы.
+  # таким образом мы формируем список делегируемых методов
+  DELEGATED_METHODS = [:username, :avatar]
+
+  def initialize(user)
+    @user = user
+  end
+
+  # объявляем исполнение метода - method_missing
+  def method_missing(method_name, *args)
+    # с помощью метода DELEGATED_METHODS.include?, мы определеяем, есть ли в списке делегированных методов, объявленный
+    if DELEGATED_METHODS.include?(method_name)
+      # далее, если метод найден среди делегируемых, мы вызываем его с помощью .send
+      @user.send(method_name, *args)
+    else
+      # если такого метода нет, мы переходим к стандартному исполнению method_missing
+      super
+    end
+  end
+end
+
+#----------------- SIMPLE DELEGATOR -----------------------------
+# с помощью класса SimpleDelegator, мы можем автоматически делегировать все методы указанные в заданном объекте
+
+require 'delegate'
+
+class Tweet < SimpleDelegator
+# все методы объекта user, будут делегированы классу tweet
+  def initialize(user)
+    super(user)
+  end
+end
+
+#----------------- DYNAMIC METHODS -----------------------------
+# динамические методы можно использовать, когда нам известно часть имени методов, некая маска у определенной группы методов, и мы можем вызывать такие методы, с помощью заджачи параметров этой маски
+
+# есть обычный класс
+tweet = Tweet.new("Sponsored by")
+# у класса есть группа методов, название которых, начинается с hash_*
+tweet.hash_ruby
+tweet.hash_metaprogramming
+puts tweet
+
+# мы можем вызыввать любой метод из этой группы, с помощью такого кода:
+
+class Tweet
+  def initialize(text)
+    @text = text
+  end
+
+  def to_s 
+    @text
+  end
+
+  def method_missing(method_name, *args)
+    # далее мы с вносим данные в переменную match, если данные соответствуют нашей маски, т.е. мы применяем маску и вставляем фрагмент "hash_" перед именем каждого метода.
+    match = method_name.to_s.match(/^hash_(\w+)/)
+    if match
+      @text << " #" + match[1]
+    else
+      super
+    end
+  end
+end
+
+#----------------- RESPOND_TO? -----------------------------
+# с помощью метода RESPOND_TO?, мы можем проверять наличие определенного метода в классе, пример
+
+tweet = Tweet.new
+tweet.respond_to?(:to_s)      # => true
+tweet.hash_ruby   # этот метод будет работать, потому что мы объявили метод method_missing
+tweet.respond_to?(:hash_ruby) # => false, но результат false в этом случае не будет правильным, т.к. метод объявлен в method_missing
+# для того, чтоб исправить эту ситуацию, нужно переопределить метод respond_to?, для класса Tweet:
+
+class Tweet
+...
+  def respond_to?(method_name)
+    # вносим в переопределение метода условие, по которому, к имени вызываемого метода, добавляется наша маска, и только в случае, если метод с маской не найден, выполняются действия по-умолчанию.
+    method_name =~ /^hash_\w+/ || super
+  end
+end
+
+# в таком случае метод .respond_to? вернет true:
+tweet.respond_to?(:hash_ruby) # => true
+
+#----------------- RESPOND_TO_MISSING? -----------------------------
+# но остается ещё одна проблемка, в случае приминения метода .method, занесение исполнения метода в отдельную переменную, и дальнейшее применение аналогично блоку, будет не возможным, т.к. вернет ошибку
+tweet.method(:hash_ruby) # => NameError: undefined method
+
+# решение это ситуации доступно с версии Ruby 1.9.3, с помощью переопределения метода respond_to _missing ?
+
+class Tweet
+...
+  def respond_to _missing ?(method_name)
+    method_name =~ /^hash_\w+/ || super
+  end
+end
+
+tweet = Tweet.new
+tweet.method(:hash_ruby) # в этом случае будет возвращен метод .hash_ruby
+
+#----------------- DEFINE_METHOD REVISITED -----------------------------
+# также рассмотрим ситуацию, когда динамически формируемый метод вызывается два раза подрдяд:
+
+def method_missing(method_name, *args)
+  match = method_name.to_s.match(/^hash_(\w+)/)
+  if match
+    @text << " #" + match[1]
+  else
+    super
+  end
+end
+
+tweet.hash_codeschool
+tweet.hash_codeschool
+# в этом случае, мы получим динамическое формирование метода дважды. В вызов может быть и более двух раз подряд, все это может быть очень накладно по ресурсам, что будет влиять на производительность.
+# для ускорение работы кода, в этом случае, нам нужно, при первом динамическом формировании метода, "запомнить" его, путем динамического создания в классе, и в дальнейшем, при повторном вызове, обращаться уже непосредственно к этому созданному методу, а не создавать его постоянно динамически снова.
+# реализуется такой подход следующим способом:
+
+def method_missing(method_name, *args)
+  match = method_name.to_s.match(/^hash_(\w+)/)
+  if match
+    # получаем доступ ко внутреннему классу, через блок .class_eval
+    self.class.class_eval do
+      # далее динамически создаем метод с нужным для нас именем с помощью блока define_method
+      define_method(method_name) do
+        # исполнение метода идет с блоке define_method
+        @text << " #" + match[1]
+      end
+    end
+    # далее мы просто вызываем этот метод
+    send(method_name)
+  else
+    super
+  end
+end
+
+tweet.hash_codeschool # => сначала будет исполнен method_missing
+tweet.hash_codeschool # => а тут уже будет исполнен непосредственно .hash_codeschool
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
