@@ -875,3 +875,172 @@ def hashtag(str)
   self
 end
 
+#========================= LEVEL 6: DSL PART 2 ==================
+#----------------- SPECIAL CASES -----------------------------
+# специальные поля используются в DSL, если нам нужно передать только какие-то конкретные параметры, а какие-то можно оставить пустыми, рассмотрим это на предыдущем примере:
+
+# если мы захотим передать перемтр в наш метод tweet_as, для того чтоб он исполнился, то получим результат
+
+tweet_as 'markkendall' do
+  text 'This is a simple tweet'
+end
+
+#=> tweet_as 'markkendall', 'This is a simple tweet'
+
+# как видим, это не сильно корректный результат, нам нужно чтобы сообщение выводилось одной строкой без разделяющих кавычек.
+# Ранее мы выводили эту строку таким способом
+def tweet_as(user, &block)
+  tweet = Tweet.new(user)
+  tweet.instance_eval(&block)
+  tweet.submit_to_twitter
+end
+
+# но для того, чтоб вывод сообщение проводился одной строкой, мы внесем изменения в метод tweet_as
+
+def tweet_as(user, text=nil &block)
+  tweet = Tweet.new(user)
+  # тут мы исполняем метод текст, если он был передан в аргументе
+  tweet.text(text) if text
+  # также мы добавляем блок, только если он был указан в аргументе
+  tweet.instance_eval(&block) if block_given?
+  tweet.submit_to_twitter
+end
+
+# теперь рассмотрим пример такого использования
+# сначала мы передаем стандартные параметры, для вывода первоначальной строки
+
+tweet_as 'markkendall' do
+  mention 'codeschool'
+  text('I made a DSL!').hashtag('hooray').hashtag('ruby')
+  link 'http://codeschool.com'
+end
+
+#=> markkendall: @codeschool I made a DSL! #hooray #ruby http://codeschool.com
+
+# далее нам нужно вывести какое-то произвольную строку
+
+tweet_as 'markkendall', 'This is a simple tweet'
+# здесь мы передаем в метод tweet_as, только два параметра, user и текст, соответственно блок исполнен не будет, и мы получим:
+#=> markkendall: This is a simple tweet
+
+#----------------- ARRAY PARAMETERS -----------------------------
+# Рассмотрим пример передачи одноименых параметров в наш метод tweet_as с помощью массивов
+
+# Так писать не надо
+tweet_as 'markkendall' do
+  mention 'codeschool'
+  mention 'envylabs'
+  text 'I made a DSL!'
+end
+
+# Надо писать так
+tweet_as 'markkendall' do
+  mention 'codeschool', 'envylabs'
+  text 'I made a DSL!'
+end
+
+# здесь мы видим, что параметр mention передается в виде массива данных, рантше в классе Tweet, он обрабатывался вот так:
+
+def mention(user)
+  @tweet << "@" + user
+  self
+end
+
+# но сейчас такой код не подходит, т.к. в аргументе метода mention передается массив данных. Теперь лучше использовать такой код:
+def mention(*users)
+  users.each do |user|
+    @tweet << "@" + user
+  end
+  self
+end
+
+#----------------- DYNAMIC METHODS -----------------------------
+# также рассмотрим работу с необъявленными методами, которых нет в классе Tweet, но которые также могут быть переданы в виде блока с параметрами, пример:
+
+tweet_as 'markkendall' do
+  mention 'codeschool', 'envylabs'
+  text 'I made a DSL!'
+  hashtag 'hooray'
+  hashtag 'ruby'
+  link 'http://codeschool.com'
+  # для этих трех последних параметров, нет исполнения в классе Tweet
+  # поэтому нам нужно поместить их в отдельных хеш, для дальнейшей работы
+  lat 28.415833
+  lng -81.298889
+  keywords 'Ruby', 'DSL'
+end
+
+# раньше у нас был такой код класса Tweet и сейчас он не подходит
+
+class Tweet
+  def initialize(user)
+    @user = user
+    @tweet = []
+  end
+
+  def submit_to_twitter
+    tweet_text = @tweet.join(' ')
+    puts "#{@user}: #{tweet_text}"
+  end
+end
+
+# мы будем работать с неизвестными параметрам с помощью метода - method_missing
+
+class Tweet
+  def initialize(user)
+    @user = user
+    @tweet = []
+    @annotations = {} # наш хеш для необъявленных методов
+  end
+  
+  def submit_to_twitter
+    tweet_text = @tweet.join(' ')
+    puts "#{@user}: #{tweet_text}"
+    # выводим неназыванные параметры, только если хеш @annotations - не пустой!
+    puts @annotations.inspect unless @annotations.empty?
+  end
+  
+  # отлавливаем неопределенные методы с помощью method_missing..
+  def method_missing(method, *args)
+    #.. и помещаем их в хеш annotations с ключем названия метода
+    @annotations[method] = args.join(", ")
+  end
+end
+
+# теперт когда мы передадим блок с неопределенными параметрами, то мы получим сообщение - 
+#=> markkendall: @codeschool @envylabs I made a DSL! #hooray #ruby http://codeschool.com
+#=> {:lat=>"28.415833", :lng=>"-81.298889", :keywords=>"Ruby, DSL"}
+
+#----------------- ERROR HANDLING -----------------------------
+# Рассмотрим обработчик ошибок для нашего кода. Например нам нужно чтобы программа реагировала на слишком длинный переданный твит
+ 
+
+def submit_to_twitter
+  tweet_text = @tweet.join(' ')
+  # проверяем длину переданной строки, если не более 140 символов, то норм
+  if tweet_text.length <= 140
+    puts "#{@user}: #{tweet_text}"
+    puts @annotations.inspect unless @annotations.empty?
+  # если же более, то выдаем ошибку:
+  else
+    raise "Your tweet is too long."
+  end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

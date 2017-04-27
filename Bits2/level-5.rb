@@ -67,4 +67,48 @@ def with_game(name, &block)
   game.instance_eval(&block)
 end
 
-# --- Looking Up Games
+# --- Operating On Games
+class Game
+  attr_reader :name
+
+  def initialize(name)
+    @name = name
+    @year = nil
+    @system = nil
+  end
+
+  def year(value)
+    @year = value
+  end
+
+  def system(value)
+    @system = value
+  end
+
+  def print_details
+    puts "#{@name} - #{@year} (#{@system})"
+  end
+  
+  def play
+  end
+  
+  def capture_screenshot
+  end
+end
+
+# --- The Working DSL
+add_game "Civilization" do
+  system "PC"
+  year 1991
+end
+
+add_game "Contra" do
+  system "NES"
+  year 1987
+end
+
+with_game "Contra" do
+  print_details
+  play
+  capture_screenshot
+end
